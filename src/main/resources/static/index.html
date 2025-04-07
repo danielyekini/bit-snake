@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake AI Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <h1>Snake AI Game</h1>
+        <!-- Where we display the board / snake data -->
+        <div id="game-board"></div>
+        
+        <!-- Where we display the scoreboard data -->
+        <div id="scoreboard"></div>
+
+        <div id="controls">
+            <button id="start-game">Start Game (Add BFS snake)</button>
+            <select id="ai-algorithm">
+                <option value="bfs">BFS</option>
+                <option value="dijkstra">Dijkstra</option>
+                <option value="astar">A*</option>
+                <option value="neural">Neural Network</option>
+            </select>
+            <button id="end-game">End Game</button>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <script src="websocket.js"></script>
+    <script src="scripts.js"></script>
+</body>
+</html>
