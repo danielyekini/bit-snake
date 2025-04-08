@@ -9,8 +9,8 @@ import com.example.domain.model.snakeai.Snake;
 
 public class Board {
     // Static board dimensions (change as needed)
-    static final int WIDTH = 40;
-    static final int HEIGHT = 30;
+    public static final int WIDTH = 40;
+    public static final int HEIGHT = 30;
     
 
     // Collection of snakes in the game
@@ -59,18 +59,18 @@ public class Board {
      * Returns false if the position was invalid or already occupied.
      */
      public boolean addFood(Position pos){
-         // For now
-         foodPositions.add(pos);
-         return true;
+         if(isValidPosition(pos) && !isOccupied(pos, true)){
+             foodPositions.add(pos);
+             return true;
+         }
+         return false;
      }
     
 
     /**
      * Remove food at a given position if it exists.
      */
-    public void removeFood(Position pos){
-        foodPositions.remove(pos);
-    }
+    public void removeFood(Position pos){ foodPositions.remove(pos); }
 
     /**
      * Check if there's food at the given position.
@@ -82,7 +82,7 @@ public class Board {
      */
     public Set<Position> getFoodPositions(){
         Set<Position> foodsCopy = foodPositions;
-        return foodsCopy;
+        return foodPositions;
     }
     
 
@@ -93,7 +93,7 @@ public class Board {
      * Check if a position is within the bounds of the board.
      */
     public boolean isValidPosition(Position pos){
-        return (pos.x >= WIDTH || pos.x < 0) && (pos.y >= HEIGHT || pos.y < 0);
+        return (pos.x < WIDTH && pos.x >= 0) && (pos.y < HEIGHT && pos.y >= 0);
     }
     
 
@@ -102,17 +102,43 @@ public class Board {
      * This is useful to see if placing new food or moving a snake head
      * would result in a collision.
      */
+    public boolean isOccupied(Position pos){
+        for(Snake snake : snakes){
+            for(Position segment : snake.getBody()){
+                if(pos.equals(segment)) return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isOccupied(Position pos, boolean food){
+        for(Position foodPosition : foodPositions){
+            if(pos.equals(foodPosition)) return true;
+        }
+        return false;
+    }
     
 
     /**
      * Determine if moving a snake’s head to 'newHeadPos' causes a collision
      * (out of bounds or overlaps any snake’s body).
      */
+    public boolean isCollision(Position newHead, Snake snake){
+        return isValidPosition(newHead) && isOccupied(newHead);
+    }
 
 
     /**
      * Helper method to move a snake on the board, if no collision.
      *  - This is optional. Some designs keep movement logic in GameService or Snake itself.
+     * @param snake A snake object
      */
+    public boolean moveSnake(Snake snake, Position newHead, boolean grow){
+        if(!isCollision(newHead, snake)){
+            snake.updateBody(newHead, grow);
+            return true;
+        }
+        return false;
+    }
 
 }

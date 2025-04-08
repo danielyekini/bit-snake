@@ -1,6 +1,9 @@
 package com.example.domain.service;
 
-import java.util.*;
+import java.util.List;
+import java.util.Random;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import com.example.routing.dto.BoardStateDto;
@@ -26,8 +29,20 @@ import org.springframework.context.ApplicationEventPublisher;
 public class GameService {
 
     // References to core components
+    final Board board;
+    final SnakeFactory snakeFactory;
+    Random random;
 
     // Main game timer that calls 'update()' periodically
+
+    Timer timer;
+    TimerTask update = new TimerTask(){
+        @Override
+        public void run() {
+            update();
+        }
+    };
+
 
     // Tracks how many milliseconds have passed since last food was eaten
     // for the "spawn food if not eaten for 3 seconds" rule.
@@ -53,18 +68,33 @@ public class GameService {
     /**
      * Constructor
      */
-    public GameService() {}
+    public GameService(Board board, SnakeFactory snakeFactory) {
+        this.board = board;
+        this.snakeFactory = snakeFactory;
+        this.random = new Random();
+    }
 
     /**
      * Start the continuous game loop (for both modes).
      * In "add-as-you-go", this runs indefinitely.
      * In "add-in-one-go", we start/stop rounds more explicitly but still use this timer.
      */
+    public void startGameLoop(){
+        if(timer != null) timer.scheduleAtFixedRate(update, 0, UPDATE_INTERVAL_MS);
+        else throw new IllegalStateException("Already running");
+
+    }
 
     /**
      * Main update method called on each tick (~5 times per second if 200ms).
      * Moves snakes, checks collisions, spawns food, and ends rounds if needed.
      */
+    public void update(){
+        for(Snake snake : board.snakes){
+
+        }
+
+    }
 
     
     /** 
@@ -87,6 +117,13 @@ public class GameService {
     /**
      * Spawn a piece of food in a random unoccupied cell.
      */
+    public void spawnRandomFood() {
+        Position pos;
+        do {
+            pos = new Position(random.nextInt(0, Board.WIDTH),
+                    random.nextInt(0, Board.HEIGHT));
+        } while (!board.addFood(pos));
+    }
     
 
     /**
@@ -139,6 +176,9 @@ public class GameService {
      * For add-as-you-go mode, can be called any time. 
      * For add-in-one-go mode, should typically be called in 'startRound' before the round begins.
      */
+//    public void addSnake(SnakeType type){
+//        snakeFactory.createSnake(type)
+//    }
     
 
     /**
@@ -192,6 +232,9 @@ public class GameService {
      * @param x the number of snakes to return
      * @return a list of the top X snakes
      */
+    public List<Snake> getNSnakes(int x){
+        return board.getSnakes().subList(0, x);
+    }
     
 
     /* =========================
