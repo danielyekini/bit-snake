@@ -7,6 +7,7 @@ import com.example.domain.model.Position;
  */
 public enum Direction {
 
+    UP(1), DOWN(2), LEFT(3), RIGHT(4);
     /**
      * Helper to compute the next position given a current position and direction.
      * 
