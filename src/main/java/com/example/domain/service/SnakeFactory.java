@@ -13,12 +13,11 @@ public class SnakeFactory {
     public Snake createSnake(SnakeType type, Position startPos, Direction dir, int snakeId){
         Snake snake;
         switch(type){
-            case ASTAR -> snake = new AStarSnake();
-            case NEURAL -> snake = new NeuralNetSnake();
-            case BFS -> snake = new BFSSnake();
-            default -> throw new IllegalArgumentException("Unknown snake type");
+            case ASTAR -> snake = new AStarSnake(startPos, dir, snakeId, getRandomName());
+            case NEURAL -> snake = new NeuralNetSnake(startPos, dir, snakeId, getRandomName());
+            case BFS -> snake = new BFSSnake(startPos, dir, snakeId, getRandomName());
+            default -> throw new IllegalArgumentException("Unknown snake type.");
         }
-        snake.updateBody(startPos, true);
         snake.setDirection(dir);
         snake.setSnakeId(snakeId);
         return snake;

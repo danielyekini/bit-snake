@@ -1,24 +1,17 @@
 package com.example.domain.service;
 
-import java.util.List;
-import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import com.example.routing.dto.BoardStateDto;
-import com.example.routing.dto.request.ScoreboardEntry;
-import com.example.routing.events.BoardChangedEvent;
-import com.example.routing.events.ScoreboardChangedEvent;
 import com.example.domain.enums.Direction;
-import com.example.domain.enums.GameMode;
 import com.example.domain.enums.SnakeType;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
+
+import com.example.domain.enums.GameMode;
 import com.example.domain.model.Board;
 import com.example.domain.model.Position;
 import com.example.domain.model.snakeai.Snake;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.ApplicationEventPublisher;
 
 /**
  * Manages the core game logic (movement, collisions, food spawning, etc.).
@@ -29,37 +22,34 @@ import org.springframework.context.ApplicationEventPublisher;
 public class GameService {
 
     // References to core components
-    final Board board;
-    final SnakeFactory snakeFactory;
-    Random random;
+    private final Board board;
+    private final SnakeFactory snakeFactory;
+    private Random random;
 
     // Main game timer that calls 'update()' periodically
-
-    Timer timer;
-    TimerTask update = new TimerTask(){
-        @Override
-        public void run() {
-            update();
-        }
-    };
-
+    private Timer gameLoopTimer;
 
     // Tracks how many milliseconds have passed since last food was eaten
     // for the "spawn food if not eaten for 3 seconds" rule.
 
     // Indicates which game mode we're currently using
+    private GameMode currentMode;
+    private AtomicBoolean bool = new AtomicBoolean();
 
     // For add-in-one-go mode, we can track if a round is in progress
+    private boolean roundInProgress;
 
     // Interval (ms) between game updates (ticks)
     private static final long UPDATE_INTERVAL_MS = 200;
 
     // For the "spawn additional food every 3 seconds" rule:
     private static final long FOOD_SPAWN_INTERVAL_MS = 3000;
+    private long lastFoodSpawn;
 
     // Minimum food items always present
     private static final int MIN_FOOD_COUNT = 3;
 
+    private Snake userSnake;
 
     @Autowired
     private ApplicationEventPublisher eventPublisher;
@@ -80,8 +70,14 @@ public class GameService {
      * In "add-in-one-go", we start/stop rounds more explicitly but still use this timer.
      */
     public void startGameLoop(){
-        if(timer != null) timer.scheduleAtFixedRate(update, 0, UPDATE_INTERVAL_MS);
-        else throw new IllegalStateException("Already running");
+        if(gameLoopTimer != null) throw new IllegalStateException("Game loop has already been started");
+        gameLoopTimer = new Timer(true);
+        gameLoopTimer.scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run(){
+                update();
+            }
+        }, 0, UPDATE_INTERVAL_MS);
 
     }
 
@@ -89,11 +85,12 @@ public class GameService {
      * Main update method called on each tick (~5 times per second if 200ms).
      * Moves snakes, checks collisions, spawns food, and ends rounds if needed.
      */
-    public void update(){
-        for(Snake snake : board.snakes){
-
+    public synchronized void update(){
+        for(Snake snake : board.getSnakes()){
+            board.moveSnake(snake, snake.getNextDirection(board).nextPosition(snake.getHead()), false);
+            if(board.isCollision(snake.getHead(), snake)) board.removeSnake(snake);
         }
-
+        if(System.currentTimeMillis() - lastFoodSpawn >= FOOD_SPAWN_INTERVAL_MS) spawnRandomFood();
     }
 
     
@@ -121,8 +118,9 @@ public class GameService {
         Position pos;
         do {
             pos = new Position(random.nextInt(0, Board.WIDTH),
-                    random.nextInt(0, Board.HEIGHT));
+                               random.nextInt(0, Board.HEIGHT));
         } while (!board.addFood(pos));
+        lastFoodSpawn = System.currentTimeMillis();
     }
     
 
@@ -135,18 +133,29 @@ public class GameService {
      *       Game Modes
      * ========================= */
 
+    public GameMode getCurrentMode() {
+        return currentMode;
+    }
+
+    public boolean isRoundInProgress() {
+        return roundInProgress;
+    }
     /**
      * Switch to add-as-you-go mode. 
      * In this mode, you can add snakes at any time.
      */
-    
+    public void switchToAddAsYouGoMode(){
+        currentMode = GameMode.ADD_AS_YOU_GO;
+    }
 
     /**
      * Switch to add-in-one-go mode. 
      * Typically you'd gather user config (how many BFS, A*, etc.), 
      * then call startRound(...) once you're ready.
      */
-    
+    public void switchToAddInOneGoMode(){
+        currentMode = GameMode.ADD_IN_ONE_GO;
+    }
 
     /**
      * Start a round in add-in-one-go mode.
@@ -154,17 +163,45 @@ public class GameService {
      * @param snakeRequests a map or list describing which snakes to spawn 
      *                      (e.g. BFS=2, ASTAR=1, DIJKSTRA=0).
      */
+    public void startRound(Map<SnakeType, Integer> snakeRequests){
+        if(currentMode == GameMode.ADD_IN_ONE_GO){
+            clearBoard();
+            for(SnakeType snakeType : snakeRequests.keySet()){
+                for(int num = 0; num < snakeRequests.get(snakeType); num++){
+                    board.addSnake(snakeFactory.createSnake(snakeType, new Position(10, (int) (Math.random() * 10)), Direction.RIGHT, generateId()));
+                }
+            }
+        }
+    }
     
 
     /**
      * End the current round (in add-in-one-go mode). 
      * Possibly declare a winner if there's only one snake left.
      */
+    public int endRound(){
+        if(currentMode == GameMode.ADD_IN_ONE_GO){
+            if(board.getSnakes().size() == 1){
+                clearBoard();
+                return board.getSnakes().getFirst().getSnakeId();
+            }
+            clearBoard();
+        }
+        return -1;
+    }
     
 
     /** 
      * Utility to clear the board (snakes + food).
      */
+    public void clearBoard(){
+        for(Snake snake : board.getSnakes()){
+            board.removeSnake(snake);
+        }
+        for(Position food : board.getFoodPositions()){
+            board.removeFood(food);
+        }
+    }
     
 
     /* =========================
@@ -176,19 +213,27 @@ public class GameService {
      * For add-as-you-go mode, can be called any time. 
      * For add-in-one-go mode, should typically be called in 'startRound' before the round begins.
      */
-//    public void addSnake(SnakeType type){
-//        snakeFactory.createSnake(type)
-//    }
+    public void addSnake(SnakeType type){
+        board.addSnake(snakeFactory.createSnake(type, new Position(0, 0), Direction.DOWN, generateId()));
+    }
     
 
     /**
      * Remove a snake from the board (e.g., user action).
      */
+    public void removeSnake(int snakeId){
+        for(Snake snake : board.getSnakes()){
+            if(snake.getSnakeId() == snakeId) board.removeSnake(snake);
+        }
+    }
     
 
     /**
      * For demonstration, a simple incremental ID generator.
      */
+    public int generateId(){
+        return board.getSnakes().size()-1;
+    }
     
 
     /* =========================
@@ -199,18 +244,30 @@ public class GameService {
      * Take control of a snake by ID.
      * Only one snake can be controlled at a time.
      */
+    public void controlSnake(int snakeId){
+        for(Snake snake : board.getSnakes()){
+            if(snake.getSnakeId() == snakeId){
+                userSnake = snake;
+                break;
+            }
+        }
+    }
     
 
     /**
      * Release control of any snake currently controlled.
      */
+    public void releaseControl(){
+
+    }
     
 
     /**
      * Set the direction for the currently controlled snake.
      */
-    
-
+    public void setUserDirection(Direction newDirection){
+        userSnake.setDirection(newDirection);
+    }
 
     /* =========================
      *   Accessors
@@ -220,7 +277,9 @@ public class GameService {
     /**
      * For the controller or UI to fetch the board state, e.g. for rendering.
      */
-    
+    public Board getBoard() {
+        return board;
+    }
 
     /**
      * Cleanup
@@ -244,5 +303,4 @@ public class GameService {
     public void setEventPublisher(ApplicationEventPublisher eventPublisher) {
         this.eventPublisher = eventPublisher;
     }
-    
 }

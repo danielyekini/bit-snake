@@ -76,6 +76,7 @@ public class BoardTest {
         Position pos = new Position(5, 5);
         when(mockSnake.getBody()).thenReturn(List.of(pos));
         board.addSnake(mockSnake);
+//        System.out.println(mockSnake.getBody());
         
         assertFalse(board.addFood(pos));
         assertFalse(board.hasFood(pos));

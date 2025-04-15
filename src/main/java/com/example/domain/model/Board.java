@@ -14,11 +14,11 @@ public class Board {
     
 
     // Collection of snakes in the game
-    public List<Snake> snakes;
+    private List<Snake> snakes;
     
 
     // Positions of all food items on the board
-    public Set<Position> foodPositions;
+    private Set<Position> foodPositions;
     
 
     public Board() {
@@ -47,8 +47,7 @@ public class Board {
      * Return an immutable view of all snakes.
      */
     public List<Snake> getSnakes(){
-        List<Snake> snakesCopy = snakes;
-        return snakesCopy;
+        return List.copyOf(snakes);
     }
 
     /* =========================
@@ -75,14 +74,13 @@ public class Board {
     /**
      * Check if there's food at the given position.
      */
-    public boolean hasFood(Position p){ return foodPositions.contains(p); }
+    public boolean hasFood(Position p){ return foodPositions.contains(p) && !isOccupied(p); }
 
     /**
      * Get all the current food positions.
      */
     public Set<Position> getFoodPositions(){
-        Set<Position> foodsCopy = foodPositions;
-        return foodPositions;
+        return Set.copyOf(foodPositions);
     }
     
 
@@ -112,10 +110,21 @@ public class Board {
     }
 
     public boolean isOccupied(Position pos, boolean food){
-        for(Position foodPosition : foodPositions){
-            if(pos.equals(foodPosition)) return true;
+        boolean collideSnake = false;
+        boolean collideFood = false;
+        for(Snake snake : snakes){
+            for(Position segment : snake.getBody()){
+                if(pos.equals(segment)) collideSnake = true;
+                break;
+            }
         }
-        return false;
+        for(Position foodPosition : foodPositions){
+            if(pos.equals(foodPosition)) {
+                collideFood = true;
+                break;
+            }
+        }
+        return collideSnake || collideFood;
     }
     
 
@@ -124,7 +133,7 @@ public class Board {
      * (out of bounds or overlaps any snake’s body).
      */
     public boolean isCollision(Position newHead, Snake snake){
-        return isValidPosition(newHead) && isOccupied(newHead);
+        return !isValidPosition(newHead) || isOccupied(newHead);
     }
 
 
@@ -134,8 +143,11 @@ public class Board {
      * @param snake A snake object
      */
     public boolean moveSnake(Snake snake, Position newHead, boolean grow){
-        if(!isCollision(newHead, snake)){
+        if(!isCollision(newHead, snake) && isValidPosition(newHead)){
             snake.updateBody(newHead, grow);
+            if(isOccupied(newHead, true)){
+                removeFood(newHead);
+            }
             return true;
         }
         return false;

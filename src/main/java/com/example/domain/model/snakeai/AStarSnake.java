@@ -8,10 +8,12 @@ import com.example.domain.model.Position;
 
 public class AStarSnake extends Snake {
 
-    public AStarSnake() {
+    public AStarSnake(Position currentPosition, Direction currentDirection, int snakeId, String name) {
+        super(currentPosition, currentDirection, snakeId, name);
     }
 
     @Override
     public Direction getNextDirection(Board board) {
+        return null;
     }
 }

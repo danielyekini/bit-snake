@@ -9,20 +9,21 @@ import com.example.domain.model.Position;
 
 public abstract class Snake {
     // A list of the snake's body positions; head is at index 0
+    protected LinkedList<Position> body;
 
     // The current direction the snake is moving
+    protected Direction direction;
 
     // Optional ID if you have multiple snakes
+    protected int snakeId;
 
     // The name of the snake
-
-    protected LinkedList<Position> body;
-    protected Direction direction;
-    protected int snakeId;
     protected String name;
 
-    public Snake(int snakeId, String name) {
+    public Snake(Position currentPosition, Direction currentDirection, int snakeId, String name) {
         body = new LinkedList<>();
+        this.body.add(currentPosition);
+        this.direction = currentDirection;
         this.snakeId = snakeId;
         this.name = name;
     }
@@ -34,7 +35,7 @@ public abstract class Snake {
      * @param board the current board state
      * @return the direction the snake wants to move next
      */
-    protected abstract Direction getNextDirection(Board board);
+    public abstract Direction getNextDirection(Board board);
     
 
     /**
@@ -43,16 +44,11 @@ public abstract class Snake {
      * @param grow if true, the snake length increases by 1 (no tail removal)
      */
     public void updateBody(Position newHead, boolean grow){
-        body.addFirst(newHead);
         if(!grow){
-            for(int segment = body.size() - 1; segment > 0; segment--){
-                body.set(segment, body.get(segment - 1));
-            }
-        } else{
-            body.addLast(body.getLast());
-            for(int segment = body.size() - 2; segment > 0; segment--){
-                body.set(segment, body.get(segment - 1));
-            }
+            body.addFirst(newHead);
+            body.removeLast();
+        } else {
+            body.addFirst(newHead);
         }
     }
     
@@ -60,7 +56,7 @@ public abstract class Snake {
     /**
      * @return the entire body of the snake (head is at index 0)
      */
-    public LinkedList<Position> getBody(){return body;}
+    public List<Position> getBody(){return body;}
     
 
     /**
@@ -103,6 +99,18 @@ public abstract class Snake {
      * Determine the Direction needed to move from 'from' -> 'to' (which must be adjacent).
      */
     private Direction directionFromTo(Position from, Position to) {
+        if(to.x > from.x){
+            return Direction.RIGHT;
+        }
+        else if(to.x < from.x){
+            return Direction.LEFT;
+        }
+        else if(to.y > from.y){
+            return Direction.DOWN;
+        }
+        else if(to.y < from.y){
+            return Direction.UP;
+        }
         return null;
     }
     
