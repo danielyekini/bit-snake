@@ -82,7 +82,7 @@ function disconnectWebSocket() {
  */
 function addBfsSnake() {
     if (!stompClient) return;
-    stompClient.send('/app/addSnake', {}, JSON.stringify({ type: 'BFS' }));
+    stompClient.send('/app/addSnake', {}, JSON.stringify({ type: 'RANDOM' }));
 }
 
 /**
