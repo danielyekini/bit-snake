@@ -12,6 +12,8 @@ import com.example.domain.enums.GameMode;
 import com.example.domain.model.Board;
 import com.example.domain.model.Position;
 import com.example.domain.model.snakeai.Snake;
+import com.example.routing.dto.BoardStateDto;
+import com.example.routing.events.BoardChangedEvent;
 
 /**
  * Manages the core game logic (movement, collisions, food spawning, etc.).
@@ -86,29 +88,46 @@ public class GameService {
      * Moves snakes, checks collisions, spawns food, and ends rounds if needed.
      */
     public synchronized void update(){
-        for(Snake snake : board.getSnakes()){
-            board.moveSnake(snake, snake.getNextDirection(board).nextPosition(snake.getHead()), false);
-            if(board.isCollision(snake.getHead(), snake)) board.removeSnake(snake);
-        }
-        if(System.currentTimeMillis() - lastFoodSpawn >= FOOD_SPAWN_INTERVAL_MS) spawnRandomFood();
+        // 1. Move each snake
+        updateSnakes();
+    
+        // 2. Ensure at least 3 pieces of food are on the board
+        maintainMinimumFoodCount();
+    
+        // 3. Check if 3 seconds have passed since last food was eaten
+        checkFoodSpawnTiming();
+    
+        // 4. If in add-in-one-go mode and round is in progress, check if we have <= 1 snake
+        checkRoundEndConditions();
+
+        // 5. Publish the board state
+        BoardStateDto boardState = BoardStateDto.fromGameService(this);
+        eventPublisher.publishEvent(new BoardChangedEvent(this, boardState));
     }
 
-    
+    /**
+     * Update the direction of each snake.
+     */
+    private void updateSnakes(){}
+
     /** 
      * Retrieve the direction for this snake. 
      * If it's controlled by a user, we read from userDirections; 
      * otherwise, we call the snake's AI (getNextDirection).
      */
+    public void getSnakeDirection(){}
 
 
     /**
-     * For demonstration: ensure we always have at least MIN_FOOD_COUNT on the board.
+     * Ensure we always have at least MIN_FOOD_COUNT on the board.
      */
+    public void maintainMinimumFoodCount(){}
     
 
     /**
-     * For demonstration: spawn additional food every 3 seconds.
+     * Spawn additional food every 3 seconds.
      */
+    public void checkFoodSpawnTiming(){}
     
 
     /**
@@ -127,6 +146,7 @@ public class GameService {
     /**
      * Check if the round should end.
      */
+    public void checkRoundEndConditions(){}
     
 
     /* =========================
