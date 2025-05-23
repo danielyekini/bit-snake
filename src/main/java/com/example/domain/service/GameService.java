@@ -46,7 +46,7 @@ public class GameService {
 
     // For the "spawn additional food every 3 seconds" rule:
     private static final long FOOD_SPAWN_INTERVAL_MS = 3000;
-    private long lastFoodSpawn;
+    private long lastFoodSpawn = System.currentTimeMillis();
 
     // Minimum food items always present
     private static final int MIN_FOOD_COUNT = 3;
@@ -108,7 +108,12 @@ public class GameService {
     /**
      * Update the direction of each snake.
      */
-    private void updateSnakes(){}
+    private void updateSnakes() {
+        for(Snake snake : board.getSnakes()) {
+            snake.setDirection(snake.getNextDirection(board));
+            snake.updateBody(snake.getDirection().nextPosition(snake.getHead()), false);
+        }
+    }
 
     /** 
      * Retrieve the direction for this snake. 
@@ -121,13 +126,15 @@ public class GameService {
     /**
      * Ensure we always have at least MIN_FOOD_COUNT on the board.
      */
-    public void maintainMinimumFoodCount(){}
+    public void maintainMinimumFoodCount() {if(board.getFoodPositions().size() < MIN_FOOD_COUNT) spawnRandomFood();}
     
 
     /**
      * Spawn additional food every 3 seconds.
      */
-    public void checkFoodSpawnTiming(){}
+    public void checkFoodSpawnTiming(){
+        if(System.currentTimeMillis() - lastFoodSpawn >= FOOD_SPAWN_INTERVAL_MS) {spawnRandomFood();}
+    }
     
 
     /**
@@ -146,7 +153,11 @@ public class GameService {
     /**
      * Check if the round should end.
      */
-    public void checkRoundEndConditions(){}
+    public void checkRoundEndConditions() {
+        if(currentMode == GameMode.ADD_AS_YOU_GO && board.getSnakes().size() <= 1) {
+            endRound();
+        }
+    }
     
 
     /* =========================
@@ -183,14 +194,12 @@ public class GameService {
      * @param snakeRequests a map or list describing which snakes to spawn 
      *                      (e.g. BFS=2, ASTAR=1, DIJKSTRA=0).
      */
-    public void startRound(Map<SnakeType, Integer> snakeRequests){
+    public void startRound(Map<SnakeType, Integer> snakeRequests) {
         if(currentMode == GameMode.ADD_IN_ONE_GO){
             clearBoard();
-            for(SnakeType snakeType : snakeRequests.keySet()){
-                for(int num = 0; num < snakeRequests.get(snakeType); num++){
+            for(SnakeType snakeType : snakeRequests.keySet())
+                for(int num = 0; num < snakeRequests.get(snakeType); num++)
                     board.addSnake(snakeFactory.createSnake(snakeType, new Position(10, (int) (Math.random() * 10)), Direction.RIGHT, generateId()));
-                }
-            }
         }
     }
     
@@ -278,7 +287,7 @@ public class GameService {
      * Release control of any snake currently controlled.
      */
     public void releaseControl(){
-
+        userSnake = null; // ?
     }
     
 
